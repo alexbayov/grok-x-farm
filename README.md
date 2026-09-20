@@ -157,6 +157,14 @@ POST /v1/chat/completions                        OpenAI-compatible inference
 - X parse test: 5 real posts about 'grok api' + 4 posts about 'smm panel telegram bot' → JSON
 - fxtwitter verification: 4/4 posts real, text and likes match 1:1
 
+### Proof run 2026-09-21 (v2.1, control panel)
+
+- reg 10/10 accounts from scratch (avg 91.4s, Turnstile free) — launched from the web panel
+- mass import of all 669 SSO (every one `created:1 synced:1` — the old 655-account stash proved ALIVE), convert Web→Build `created:665`
+- pool now **1338 records (web:669, build:669)**; doctor ALL OK; live parse: 3 real posts in 7.4s
+- panel-driven crawl ×2: cross-run dedup `+0 new` on repeat query; fxtwitter verify exists/date/likes **10/10/10** both runs (25 tweets accumulated in state)
+- interrupted import (expired admin JWT, 401 at #437) resumed via marker with zero duplicates — idempotency proven in production
+
 ## Credits / upstream
 
 - Gateway: [chenyme/grok2api](https://github.com/chenyme/grok2api) (MIT, 7.7k★)
