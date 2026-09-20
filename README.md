@@ -21,11 +21,64 @@ Twitter API costs $200/mo. Grok has built-in live X search and returns real post
 
 | Dir | What | Status |
 |-----|------|--------|
-| `autoreg/` | `replenish.py` — reg N accounts → auto-import SSO into gateway → auto-convert Web→Build | ✅ tested (2 accounts, 141–210s each) |
-| `gateway/` | `setup_grok2api.sh` — build chenyme/grok2api from source (Go), config with generated secrets | ✅ tested (healthz 200, 9 models) |
-| `parser/` | `x_parser.py` — CLI X parser with retry, JSON output | ✅ tested (posts verified via fxtwitter 4/4) |
-| `workflow/` | `GUIDE_RU.md` — full step-by-step guide with proofs | ✅ |
-| `skill/` | `SKILL.md` — Hermes Agent skill for this pipeline | ✅ |
+| `farm.py` | **Unified CLI**: doctor / reg / import / keys / parse / crawl | ✅ tested (doctor ALL OK) |
+| `config/` | `farm.config.example.json` — email providers, captcha modes, proxy modes | ✅ |
+| `autoreg/` | `replenish.py` + docs — reg accounts, auto-import SSO, auto-convert Web→Build | ✅ tested (3 accounts) |
+| `gateway/` | `setup_grok2api.sh` (Linux) + `setup_windows.bat`/`gen_secrets.ps1` (Windows) | ✅ tested |
+| `parser/` | `x_parser.py`, `x_crawl_100.py`, `queries.txt`, verified 105-tweet dataset | ✅ tested (fxtwitter 10/10) |
+| `workflow/` | `GUIDE_RU.md` — full step-by-step with proofs | ✅ |
+| `skill/` | `SKILL.md` — Hermes Agent skill | ✅ |
+| `AUDIT.md` | Security/reliability audit: 7 fixed + 7 open weaknesses | ✅ |
+
+## Configuration
+
+Copy `config/farm.config.example.json` → `farm.config.json` and edit:
+
+```jsonc
+{
+  "email":   { "provider": "tmail" },        // tmail|luckmail|mailnest|fce|gptmail|gmail|outlook
+  "captcha": { "mode": "free_browser" },     // free_browser ($0, patchright) | yescaptcha (paid fallback)
+  "proxy":   { "mode": "direct",             // direct | single | pool
+               "single": "",                 // http://user:pass@host:port — NON-RU geo required
+               "geo_whitelist": ["US","EU","UA"] },
+  "gateway": { "parse_model": "grok-chat-fast",  // Web pool = native live X search
+               "tool_model": "grok-4.5" },       // Build pool = function calling
+  "parser":  { "posts_per_query": 15, "days_window": 14, "verify_sample_size": 10 }
+}
+```
+
+Secrets via env (override config): `G2A_KEY`, `G2A_ADMIN_PASS`, `GROK_PROXY`, `YESCAPTCHA_KEY`,
+`LUCKMAIL_API_KEY`, `MAILNEST_API_KEY`, `FCE_API_KEY`, `GMAIL_APP_PASSWORD`, `REG_DIR`.
+
+## CLI
+
+```bash
+python farm.py doctor                 # gateway + egress geo + pool + models + inference probe
+python farm.py reg --count 5          # register → auto-import → auto-convert
+python farm.py import                 # import new SSO only (idempotent)
+python farm.py keys                   # create client key → g2a_key.txt
+python farm.py parse "query" --max 15 --days 7 --json out.json
+python farm.py crawl --queries-file parser/queries.txt --target 100 --out tweets.json
+                                      # + automatic fxtwitter verification of 10 random tweets
+```
+
+## Tool use (Build pool)
+
+Function calling works on grok-4.5/4.6 (Build pool) — verified full cycle:
+
+```bash
+curl http://127.0.0.1:8000/v1/chat/completions -H "Authorization: Bearer g2a_xxx" -d '{
+  "model": "grok-4.5",
+  "messages": [{"role":"user","content":"What is the weather in Tokyo?"}],
+  "tools": [{"type":"function","function":{"name":"get_weather",
+    "parameters":{"type":"object","properties":{"city":{"type":"string"}},"required":["city"]}}}]
+}'
+# → finish_reason: tool_calls, arguments {"city":"Tokyo"}
+# send tool result back → final answer
+```
+
+Note: server-side `x_search` tool does NOT work through the gateway (Build upstream has no
+server-side search). X parsing goes through the Web pool prompt path — see parser/README.md.
 
 ## Quick start
 
