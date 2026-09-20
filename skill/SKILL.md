@@ -13,7 +13,7 @@ metadata:
 # Grok X-Parser Farm
 
 Free Twitter/X parsing pipeline: autoreg Grok accounts → grok2api gateway pool → live X search.
-Full workflow verified end-to-end 2026-09-20 (+audit same day). Repo: github.com/MeshFinancial/grok-x-farm.
+Full workflow verified end-to-end 2026-09-20 (+audit same day; v2 parser reliability 2026-09-21). Repo: github.com/MeshFinancial/grok-x-farm.
 
 ## Fastest path (unified CLI)
 
@@ -21,7 +21,9 @@ Full workflow verified end-to-end 2026-09-20 (+audit same day). Repo: github.com
 python farm.py doctor                                  # health: gateway/geo/pool/models/probe
 python farm.py reg --count 5                           # reg → auto-import → convert to Build
 python farm.py parse "query" --max 15 --json out.json  # single search
-python farm.py crawl --queries-file parser/queries.txt --target 100 --out tweets.json
+python farm.py crawl --queries-file parser/queries.txt --target 100 --out tweets.json --state seen.json
+                                           # --state: cross-run dedup (merges all runs into output);
+                                           # date-window filter + fxtwitter verify (exists/date/likes) built in
 ```
 
 Config: `farm.config.json` (copy config/farm.config.example.json) — email provider

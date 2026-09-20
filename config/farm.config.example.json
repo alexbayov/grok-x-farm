@@ -75,6 +75,7 @@
   "parser": {
     "posts_per_query": 15,
     "days_window": 14,
+    "delay_between_queries_sec": 3,
     "retry_attempts": 3,
     "retry_backoff_sec": 5,
     "dedup_by": "tweet_id",

@@ -30,7 +30,8 @@ Twitter API costs $200/mo. Grok has built-in live X search and returns real post
 | `parser/` | `x_parser.py`, `x_crawl_100.py`, `queries.txt`, verified 105-tweet dataset | ✅ tested (fxtwitter 10/10) |
 | `workflow/` | `GUIDE_RU.md` — full step-by-step with proofs | ✅ |
 | `skill/` | `SKILL.md` — Hermes Agent skill | ✅ |
-| `AUDIT.md` | Security/reliability audit: 7 fixed + 7 open weaknesses | ✅ |
+| `tests/` | offline self-checks for parser helpers: `python tests/test_parser_offline.py` | ✅ 6/6 |
+| `AUDIT.md` | Security/reliability audit: 9 fixed + 6 open weaknesses | ✅ |
 
 ## Configuration
 
@@ -45,7 +46,7 @@ Copy `config/farm.config.example.json` → `farm.config.json` and edit:
                "geo_whitelist": ["US","EU","UA"] },
   "gateway": { "parse_model": "grok-chat-fast",  // Web pool = native live X search
                "tool_model": "grok-4.5" },       // Build pool = function calling
-  "parser":  { "posts_per_query": 15, "days_window": 14, "verify_sample_size": 10 }
+  "parser":  { "posts_per_query": 15, "days_window": 14, "verify_sample_size": 10, "delay_between_queries_sec": 3 }
 }
 ```
 
@@ -60,8 +61,9 @@ python farm.py reg --count 5          # register → auto-import → auto-conver
 python farm.py import                 # import new SSO only (idempotent)
 python farm.py keys                   # create client key → g2a_key.txt
 python farm.py parse "query" --max 15 --days 7 --json out.json
-python farm.py crawl --queries-file parser/queries.txt --target 100 --out tweets.json
-                                      # + automatic fxtwitter verification of 10 random tweets
+python farm.py crawl --queries-file parser/queries.txt --target 100 --out tweets.json --state seen.json
+                                      # --state: cross-run dedup (output merges all runs)
+                                      # + fxtwitter verification of 10 random tweets: exists + date + likes
 ```
 
 ## Tool use (Build pool)
@@ -136,7 +138,7 @@ POST /v1/chat/completions                        OpenAI-compatible inference
 ## Verified proof run (2026-09-20)
 
 - gateway built from source: `grok2api.exe` 90MB, healthz 200
-- 2 accounts registered from scratch: Turnstile solved free (752-char token), 141s & 210s
+- 2 accounts registered from scratch in this proof run (pool total: 4 accounts / 8 records): Turnstile solved free (752-char token), 141s & 210s
 - import: `created:1 synced:1` ×2; Web→Build: `created:1` ×2 → 4 pool records, 9 models
 - chat test: `GATEWAY_OK`
 - X parse test: 5 real posts about 'grok api' + 4 posts about 'smm panel telegram bot' → JSON

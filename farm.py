@@ -13,6 +13,7 @@ Config: farm.config.json (copy from config/farm.config.example.json).
 Env vars override config: G2A_KEY, G2A_ADMIN_PASS, G2A_BASE, YESCAPTCHA_KEY, GROK_PROXY, EMAIL_PROVIDER...
 """
 import argparse, json, os, re, sys, time, urllib.request, urllib.error, uuid, subprocess
+from datetime import date, datetime
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 CFG_PATH = os.path.join(HERE, "farm.config.json")
@@ -267,6 +268,81 @@ def tweet_key(p):
     return m.group(1) if m else json.dumps(p, sort_keys=True)[:100]
 
 
+def parse_post_date(raw):
+    """Parse common post-date formats -> datetime.date, or None if unparseable."""
+    if not raw:
+        return None
+    s = str(raw).strip()
+    if s.isdigit():
+        try:
+            return datetime.utcfromtimestamp(int(s)).date()
+        except (ValueError, OSError, OverflowError):
+            return None
+    for fmt in ("%a %b %d %H:%M:%S %z %Y", "%Y-%m-%d", "%b %d, %Y", "%B %d, %Y",
+                "%d.%m.%Y", "%d %b %Y", "%d %B %Y", "%Y/%m/%d", "%m/%d/%Y"):
+        try:
+            return datetime.strptime(s, fmt).date()
+        except ValueError:
+            continue
+    return None
+
+
+def date_within(post, days, today=None):
+    """True if post date is inside the window. Unparseable dates are kept
+    (silent data loss is worse); +1 day grace on both edges for TZ drift."""
+    if not days or days <= 0:
+        return True
+    d = parse_post_date(post.get("date"))
+    if d is None:
+        return True
+    age = ((today or date.today()) - d).days
+    return -1 <= age <= days + 1
+
+
+def parse_likes(raw):
+    """Normalize likes ('18', '1.2K', 18) -> int or None."""
+    if raw is None:
+        return None
+    if isinstance(raw, (int, float)):
+        return int(raw)
+    s = str(raw).strip().replace(",", "").replace(" ", "")
+    if not s:
+        return None
+    try:
+        mult = 1
+        if s[-1] in "Kk":
+            mult, s = 1000, s[:-1]
+        elif s[-1] in "Mm":
+            mult, s = 1000000, s[:-1]
+        return int(float(s) * mult)
+    except ValueError:
+        return None
+
+
+def load_seen(path):
+    """Load seen-state {tweet_key: entry}; {} when missing/corrupt."""
+    if not path or not os.path.exists(path):
+        return {}
+    try:
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except (OSError, json.JSONDecodeError) as exc:
+        print(f"[WARN] state unreadable, starting fresh: {exc}", file=sys.stderr)
+        return {}
+
+
+def merge_seen(state, entries):
+    """Merge entries into seen-state in place; return count of new keys."""
+    new = 0
+    for e in entries:
+        k = tweet_key(e)
+        if k and k not in state:
+            state[k] = e
+            new += 1
+    return new
+
+
 def cmd_parse(a):
     posts = search_once(a.query, a.max, a.days, a.handle)
     print(f"[+] {len(posts)} posts", file=sys.stderr)
@@ -281,11 +357,20 @@ def cmd_crawl(a):
     queries = [q.strip() for q in open(a.queries_file, encoding="utf-8") if q.strip() and not q.startswith("#")]
     seen, allp = set(), []
     per = CFG["parser"]["posts_per_query"]
+    state = load_seen(a.state) if a.state else {}
+    if state:
+        seen.update(state.keys())
+        print(f"[i] state: {len(state)} tweets from previous runs loaded", file=sys.stderr)
     for i, q in enumerate(queries, 1):
         if len(allp) >= a.target: break
         t0 = time.time()
         try:
             posts = search_once(q, per, a.days)
+            if a.days > 0:
+                before = len(posts)
+                posts = [p for p in posts if date_within(p, a.days)]
+                if len(posts) < before:
+                    print(f"[i] {q!r}: {before - len(posts)} post(s) outside {a.days}d window dropped", file=sys.stderr)
         except Exception as e:
             print(f"[{i}] {q!r}: ERROR {e}", file=sys.stderr); continue
         added = 0
@@ -294,29 +379,58 @@ def cmd_crawl(a):
             if k in seen: continue
             seen.add(k); allp.append(p); added += 1
         print(f"[{i}/{len(queries)}] {q!r}: +{added} (total {len(allp)}) {time.time()-t0:.0f}s", file=sys.stderr)
-        lo, hi = CFG["farm"]["delay_between_accounts_sec"]
-        time.sleep(min(hi, max(lo, 2)))
-    json.dump(allp, open(a.out, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+        time.sleep(CFG["parser"].get("delay_between_queries_sec", 3))
+    if a.state:
+        new_n = merge_seen(state, allp)
+        allp = list(state.values())
+        st = os.path.abspath(a.state)
+        os.makedirs(os.path.dirname(st) or ".", exist_ok=True)
+        tmp = st + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(state, f, ensure_ascii=False, indent=2)
+        os.replace(tmp, st)
+        print(f"[STATE] +{new_n} new, {len(allp)} total across runs -> {a.state}", file=sys.stderr)
+    tmp_out = os.path.abspath(a.out) + ".tmp"
+    with open(tmp_out, "w", encoding="utf-8") as f:
+        json.dump(allp, f, ensure_ascii=False, indent=2)
+    os.replace(tmp_out, os.path.abspath(a.out))
     print(f"[DONE] {len(allp)} tweets -> {a.out}", file=sys.stderr)
-    # verification sample
+    # verification sample: exists + date match + likes proximity, random (no fixed seed)
     vs = CFG["parser"]["verify_sample_size"]
     if vs and allp:
         import random
-        random.seed(7)
-        sample = random.sample([p for p in allp if re.search(r"/status/\d+", str(p.get("url","")))], min(vs, len(allp)))
-        ok = 0
-        for p in sample:
-            m = re.search(r"x\.com/([^/]+)/status/(\d+)", p["url"])
-            if not m: continue
-            try:
-                req = urllib.request.Request(f"https://api.fxtwitter.com/{m.group(1)}/status/{m.group(2)}",
-                                             headers={"User-Agent": "Mozilla/5.0"})
-                with urllib.request.urlopen(req, timeout=15) as r:
-                    json.loads(r.read())["tweet"]
-                ok += 1
-            except Exception:
-                pass
-        print(f"[VERIFY] fxtwitter: {ok}/{len(sample)} sampled tweets are real", file=sys.stderr)
+        pool = [p for p in allp if re.search(r"/status/\d+", str(p.get("url", "")))]
+        if pool:
+            sample = random.sample(pool, min(vs, len(pool)))
+            print(f"[i] verifying {len(sample)} random tweets via fxtwitter...", file=sys.stderr)
+            n_exist = n_date = n_likes = 0
+            for p in sample:
+                m = re.search(r"x\.com/([^/]+)/status/(\d+)", p["url"])
+                if not m: continue
+                try:
+                    req = urllib.request.Request(f"https://api.fxtwitter.com/{m.group(1)}/status/{m.group(2)}",
+                                                 headers={"User-Agent": "Mozilla/5.0"})
+                    with urllib.request.urlopen(req, timeout=15) as r:
+                        tw = json.loads(r.read()).get("tweet") or {}
+                except Exception as e:
+                    print(f"[VERIFY-FAIL] {m.group(1)}/{m.group(2)}: {e}", file=sys.stderr)
+                    continue
+                if not tw:
+                    print(f"[VERIFY-FAIL] {m.group(1)}/{m.group(2)}: not found", file=sys.stderr)
+                    continue
+                n_exist += 1
+                pd_, fd_ = parse_post_date(p.get("date")), parse_post_date(tw.get("created_at"))
+                date_ok = (pd_ == fd_) if (pd_ and fd_) else None
+                if date_ok: n_date += 1
+                pl, fl = parse_likes(p.get("likes")), parse_likes(tw.get("likes"))
+                # likes only grow: parsed snapshot must be <= live, within 30%+3
+                likes_ok = (pl <= fl and (fl - pl) <= max(3, fl * 0.3)) if (pl is not None and fl is not None) else None
+                if likes_ok: n_likes += 1
+                d_s = {True: "date✓", False: "date✗", None: "date?"}[date_ok]
+                l_s = {True: "likes✓", False: "likes✗", None: "likes?"}[likes_ok]
+                print(f"[VERIFY] {m.group(1)}/{m.group(2)}: exists {d_s} {pd_}/{fd_} {l_s} {pl}/{fl}", file=sys.stderr)
+            n = len(sample)
+            print(f"[VERIFY] fxtwitter random sample {n}: exists {n_exist}/{n}, date-match {n_date}/{n}, likes-close {n_likes}/{n}", file=sys.stderr)
 
 
 def main():
@@ -327,7 +441,7 @@ def main():
     sub.add_parser("import")
     sub.add_parser("keys")
     p = sub.add_parser("parse"); p.add_argument("query"); p.add_argument("--max", type=int, default=15); p.add_argument("--days", type=int, default=CFG["parser"]["days_window"]); p.add_argument("--handle"); p.add_argument("--json")
-    c = sub.add_parser("crawl"); c.add_argument("--queries-file", default="queries.txt"); c.add_argument("--out", default="tweets.json"); c.add_argument("--target", type=int, default=100); c.add_argument("--days", type=int, default=CFG["parser"]["days_window"])
+    c = sub.add_parser("crawl"); c.add_argument("--queries-file", default="queries.txt"); c.add_argument("--out", default="tweets.json"); c.add_argument("--target", type=int, default=100); c.add_argument("--days", type=int, default=CFG["parser"]["days_window"]); c.add_argument("--state", default=None, help="seen-state JSON for cross-run dedup (output merges all runs)")
     a = ap.parse_args()
     {"doctor": cmd_doctor, "reg": cmd_reg, "import": cmd_import, "keys": cmd_keys,
      "parse": cmd_parse, "crawl": cmd_crawl}[a.cmd](a)
