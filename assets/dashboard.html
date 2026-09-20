@@ -94,7 +94,7 @@ h1 .x{color:var(--accent)}
   <div class="badges">
     <span class="badge"><b>E2E tested</b> 20.09.2026</span>
     <span class="badge blue"><b>repo</b> MeshFinancial/grok-x-farm</span>
-    <span class="badge"><b>21 files</b> · audit <b>9 fixed / 6 open</b></span>
+    <span class="badge"><b>23 files</b> · audit <b>9 fixed / 6 open</b></span>
   </div>
 </header>
 
@@ -117,9 +117,10 @@ h1 .x{color:var(--accent)}
     <div class="step"><div class="no">04</div><div class="t">ПАРСИНГ X</div><div class="d">live X search промптом<br>seen-state дедуп · фильтр дат</div><div class="m">8–10 с/запрос · fxtwitter verify</div></div>
   </div>
   <div class="term">
-    <span class="c"># весь цикл — две команды:</span><br>
+    <span class="c"># весь цикл — две команды, или через веб-пульт:</span><br>
     <span class="p">$</span> python farm.py reg <span class="a">--count</span> 5 <span class="c">→ рег + импорт в шлюз + конверсия Build</span><br>
-    <span class="p">$</span> python farm.py crawl <span class="a">--queries-file</span> parser/queries.txt <span class="a">--target</span> 100 <span class="c">→ твиты + автоверификация</span>
+    <span class="p">$</span> python farm.py crawl <span class="a">--queries-file</span> parser/queries.txt <span class="a">--target</span> 100 <span class="c">→ твиты + автоверификация</span><br>
+    <span class="p">$</span> python dashboard/panel.py <span class="c">→ пульт :8010 — статус, старт/стоп шлюза, запуск, настройки, логи</span>
   </div>
 </div>
 

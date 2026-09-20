@@ -58,3 +58,11 @@
 - `tests/test_parser_offline.py`: 6 офлайн-проверок парсерных хелперов (PASS 6/6)
 - `config/farm.config.example.json`: +`parser.delay_between_queries_sec`
 - Итог: **9 закрыто / 6 открыто** (8, 9, 10, 12, 13, 15)
+
+## Изменения v2.1 (2026-09-21) — control panel
+
+- `dashboard/panel.py`: локальный веб-пульт (stdlib-only, 127.0.0.1:8010): live-статус (doctor), старт/стоп шлюза grok2api, фоновые reg/crawl с live-логом, редактор конфига (whitelist-ключи, валидация типов/диапазонов, all-or-nothing), секреты в `farm.secrets.json` (gitignored, 0600): в UI маскируются, в браузер не возвращаются, инжектятся в env дочерних процессов
+- `tests/test_panel_offline.py`: 7 офлайн-проверок (маскирование, whitelist, path-traversal, argv-builder, config roundtrip) — PASS 7/7
+- E2E вживую: API-чеки 16/16 ALL PASS; crawl через пульт 2 раза: RUN1 +10 твитов (verify exists/date/likes 10/10/10), RUN2 загрузил state → 'smm panel' +0 (дедуп подтверждён) → +15 с новой темы → 25 total across runs; doctor через пульт ALL OK
+- Семантика: с `--state` target считается по НОВЫМ твитам — при исчерпании свежих crawl проходит весь список запросов (для мониторинга это желаемое поведение)
+- `.gitignore`: +farm.secrets.json, рантайм-артефакты crawl (seen/panel_out/dashboard logs)
