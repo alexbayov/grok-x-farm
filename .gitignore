@@ -1,0 +1,23 @@
+# secrets
+SECRETS.local.txt
+g2a_key.txt
+imported_sso.txt
+.env
+*.session
+keys/
+auths/
+accounts*.txt
+sso_risk_rejected.txt
+
+# python
+.venv/
+__pycache__/
+*.pyc
+
+# build
+*.exe
+grok2api/
+grok-register/
+grok-auto/
+*.log
+data/
