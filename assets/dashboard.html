@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><style>
+body{background:#0d1117;color:#e6edf3;font-family:'Segoe UI',Arial,sans-serif;margin:0;padding:28px;width:1000px}
+h1{font-size:26px;margin:0 0 4px}
+h1 span{color:#58a6ff}
+.sub{color:#8b949e;font-size:14px;margin-bottom:20px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.card{background:#161b22;border:1px solid #30363d;border-radius:10px;padding:16px}
+.card h2{font-size:15px;margin:0 0 10px;color:#58a6ff;text-transform:uppercase;letter-spacing:.5px}
+.row{display:flex;justify-content:space-between;font-size:13.5px;padding:4px 0;border-bottom:1px solid #21262d}
+.row:last-child{border:none}
+.ok{color:#3fb950;font-weight:600}
+.warn{color:#d29922;font-weight:600}
+.mono{font-family:Consolas,monospace;font-size:12.5px;color:#79c0ff}
+.flow{background:#161b22;border:1px solid #30363d;border-radius:10px;padding:16px;margin-bottom:16px}
+.flow h2{font-size:15px;margin:0 0 12px;color:#58a6ff;text-transform:uppercase;letter-spacing:.5px}
+.steps{display:flex;gap:8px;align-items:center}
+.step{background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:10px 14px;font-size:13px;flex:1;text-align:center}
+.step b{display:block;color:#3fb950;font-size:13.5px;margin-bottom:3px}
+.arrow{color:#8b949e;font-size:18px}
+.cmd{background:#010409;border:1px solid #30363d;border-radius:8px;padding:12px 14px;font-family:Consolas,monospace;font-size:13px;color:#e6edf3;margin-top:14px}
+.cmd .c{color:#8b949e}
+.cmd .g{color:#3fb950}
+.badge{display:inline-block;background:#238636;color:#fff;border-radius:20px;padding:2px 10px;font-size:12px;margin-right:6px}
+.badge.b{background:#1f6feb}
+.foot{color:#8b949e;font-size:12px;margin-top:16px;text-align:center}
+</style></head><body>
+<h1>🫦 <span>GROK-X-FARM</span> — бесплатный парсер Twitter/X полного цикла</h1>
+<div class="sub"><span class="badge">E2E tested 20.09.2026</span><span class="badge b">github.com/MeshFinancial/grok-x-farm</span><span class="badge b">18 files</span><span class="badge">audit: 7 fixed / 7 open</span></div>
+
+<div class="flow">
+<h2>Пайплайн</h2>
+<div class="steps">
+<div class="step"><b>1. АВТОРЕГ</b>tmail почта + код<br>Turnstile БЕСПЛАТНО<br>→ SSO-токен<br><span class="mono">141-210с/акк</span></div>
+<div class="arrow">→</div>
+<div class="step"><b>2. ШЛЮЗ</b>grok2api :8000<br>пул акков + ротация<br>OpenAI-совместимый API<br><span class="mono">9 моделей</span></div>
+<div class="arrow">→</div>
+<div class="step"><b>3. КОНВЕРСИЯ</b>Web → Build<br>device flow авто<br>grok-4.5/4.6<br><span class="mono">+ tool use</span></div>
+<div class="arrow">→</div>
+<div class="step"><b>4. ПАРСИНГ X</b>live X search<br>handle/date/text/likes/url<br>fxtwitter верификация<br><span class="mono">8-10с/запрос</span></div>
+</div>
+<div class="cmd"><span class="c"># весь цикл одной командой:</span><br>python farm.py reg --count 5 &nbsp;<span class="c">→ рег + импорт + конверсия</span><br>python farm.py crawl --queries-file parser/queries.txt --target 100 <span class="c">→ 100 твитов + автоверификация</span></div>
+</div>
+
+<div class="grid">
+<div class="card"><h2>✅ Статус стека (farm.py doctor)</h2>
+<div class="row"><span>gateway :8000 healthz</span><span class="ok">200 OK</span></div>
+<div class="row"><span>egress geo</span><span class="ok">UA (whitelist)</span></div>
+<div class="row"><span>пул аккаунтов</span><span class="ok">8 записей (4×Web+Build)</span></div>
+<div class="row"><span>модели</span><span class="ok">9 (4.5/4.6/fast/imagine)</span></div>
+<div class="row"><span>inference probe</span><span class="ok">FARM_OK</span></div>
+<div class="row"><span>РЕЗУЛЬТАТ</span><span class="ok">ALL OK</span></div>
+</div>
+<div class="card"><h2>📊 Пруфы прогона</h2>
+<div class="row"><span>аккаунтов с нуля</span><span class="ok">4 (Turnstile free)</span></div>
+<div class="row"><span>tool use grok-4.5</span><span class="ok">полный цикл 200</span></div>
+<div class="row"><span>grok-4.6 live</span><span class="ok">GROK46_OK</span></div>
+<div class="row"><span>твитов спарсено</span><span class="ok">105 (80 хендлов)</span></div>
+<div class="row"><span>fxtwitter sample</span><span class="ok">10/10 реальные</span></div>
+<div class="row"><span>лайки совпали</span><span class="ok">1:1</span></div>
+</div>
+<div class="card"><h2>⚙️ Настройки farm.config.json</h2>
+<div class="row"><span>почта</span><span class="mono">7 провайдеров</span></div>
+<div class="row"><span>tmail/duckmail</span><span class="ok">$0 без ключа</span></div>
+<div class="row"><span>gmail/outlook</span><span class="mono">+alias / пул</span></div>
+<div class="row"><span>капча</span><span class="ok">free_browser $0</span></div>
+<div class="row"><span>фолбэк капчи</span><span class="mono">yescaptcha после N фейлов</span></div>
+<div class="row"><span>прокси</span><span class="mono">direct/single/pool + geo</span></div>
+</div>
+<div class="card"><h2>⚠️ Честные ограничения</h2>
+<div class="row"><span>серые запросы ('cvv shop')</span><span class="warn">X фильтрует → 0</span></div>
+<div class="row"><span>RU-выходы</span><span class="warn">гео-блок xAI</span></div>
+<div class="row"><span>один IP на пул</span><span class="warn">&gt;20 акков → residential</span></div>
+<div class="row"><span>x_search tool через шлюз</span><span class="warn">не работает → Web-промпт</span></div>
+<div class="row"><span>CPA refresh-токены</span><span class="warn">мрут ~1 мес → SSO</span></div>
+<div class="row"><span>авто-репленiш по квоте</span><span class="warn">TODO</span></div>
+</div>
+</div>
+<div class="foot">ENI/Gothbreach · grok-x-farm · autoreg → gateway → parse · всё бесплатно, всё проверено</div>
+</body></html>
