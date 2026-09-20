@@ -66,3 +66,4 @@
 - E2E вживую: API-чеки 16/16 ALL PASS; crawl через пульт 2 раза: RUN1 +10 твитов (verify exists/date/likes 10/10/10), RUN2 загрузил state → 'smm panel' +0 (дедуп подтверждён) → +15 с новой темы → 25 total across runs; doctor через пульт ALL OK
 - Семантика: с `--state` target считается по НОВЫМ твитам — при исчерпании свежих crawl проходит весь список запросов (для мониторинга это желаемое поведение)
 - `.gitignore`: +farm.secrets.json, рантайм-артефакты crawl (seen/panel_out/dashboard logs)
+- `farm.py doctor`: подсчёт пула с пагинацией (страницы по 200, дедуп по id) — на пуле 1338 записей первая страница была целиком build → ложный FAIL web:0; частично закрывает doctor-часть #15

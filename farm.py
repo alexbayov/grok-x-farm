@@ -108,14 +108,29 @@ def cmd_doctor(_a):
         ok = ok and geo_ok
     except Exception as e:
         print(f"[WARN] egress check failed: {e}")
-    # pool
+    # pool (paginated: count ALL records, first page can be all-build on big pools)
     try:
         tok = admin_token()
-        st, body = api_admin(tok, "/api/admin/v1/accounts?pageSize=100")
-        items = json.loads(body)["data"]["items"]
-        web = sum(1 for a in items if a.get("provider") == "grok_web")
-        build = sum(1 for a in items if a.get("provider") == "grok_build")
-        print(f"[{'OK' if web else 'FAIL'}] pool: {len(items)} records (web:{web} build:{build})")
+        web = build = total = 0
+        seen_ids = set()
+        page = 1
+        while page <= 100:
+            st, body = api_admin(tok, f"/api/admin/v1/accounts?page={page}&pageSize=200")
+            items = (json.loads(body).get("data") or {}).get("items") or []
+            if not items:
+                break
+            new = 0
+            for a in items:
+                aid = str(a.get("id"))
+                if aid in seen_ids:
+                    continue
+                seen_ids.add(aid); new += 1; total += 1
+                if a.get("provider") == "grok_web": web += 1
+                elif a.get("provider") == "grok_build": build += 1
+            if new == 0 or len(items) < 200:
+                break  # page param unsupported (all dupes) or last page
+            page += 1
+        print(f"[{'OK' if web else 'FAIL'}] pool: {total} records (web:{web} build:{build})")
         ok = ok and web > 0
     except Exception as e:
         print(f"[FAIL] admin API: {e}"); ok = False
