@@ -2,6 +2,7 @@
 SECRETS.local.txt
 g2a_key.txt
 imported_sso.txt
+farm.config.json
 .env
 *.session
 keys/
