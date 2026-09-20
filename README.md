@@ -30,7 +30,8 @@ Twitter API costs $200/mo. Grok has built-in live X search and returns real post
 | `parser/` | `x_parser.py`, `x_crawl_100.py`, `queries.txt`, verified 105-tweet dataset | ✅ tested (fxtwitter 10/10) |
 | `workflow/` | `GUIDE_RU.md` — full step-by-step with proofs | ✅ |
 | `skill/` | `SKILL.md` — Hermes Agent skill | ✅ |
-| `tests/` | offline self-checks for parser helpers: `python tests/test_parser_offline.py` | ✅ 6/6 |
+| `dashboard/` | `panel.py` — local web control panel: live status, start/stop gateway, run reg/crawl, edit config, secrets, log tail. Stdlib only, 127.0.0.1:8010 | ✅ |
+| `tests/` | offline self-checks: `python tests/test_parser_offline.py` (6/6) + `python tests/test_panel_offline.py` (7/7) | ✅ 13/13 |
 | `AUDIT.md` | Security/reliability audit: 9 fixed + 6 open weaknesses | ✅ |
 
 ## Configuration
@@ -65,6 +66,18 @@ python farm.py crawl --queries-file parser/queries.txt --target 100 --out tweets
                                       # --state: cross-run dedup (output merges all runs)
                                       # + fxtwitter verification of 10 random tweets: exists + date + likes
 ```
+
+## Control panel
+
+```bash
+python dashboard/panel.py            # → http://127.0.0.1:8010 (localhost only, stdlib, no deps)
+```
+
+- **Status**: runs `farm.py doctor` (button + auto-refresh 30s)
+- **Gateway**: start/stop grok2api (exe path from `gateway.exe_path` / `G2A_EXE` / standard locations)
+- **Run**: reg (count 1..20) and crawl (queries file, target, days, state) as background tasks with live log tail
+- **Settings**: email provider, captcha mode, proxy mode/single, geo whitelist, parser limits → saved to `farm.config.json` (whitelist + type/range validated)
+- **Secrets**: `G2A_KEY`, `YESCAPTCHA_KEY`, etc → stored in `farm.secrets.json` (gitignored, 0600), masked in UI, injected into child-process env — never returned to the browser
 
 ## Tool use (Build pool)
 

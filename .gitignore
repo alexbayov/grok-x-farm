@@ -9,6 +9,7 @@ keys/
 auths/
 accounts*.txt
 sso_risk_rejected.txt
+farm.secrets.json
 
 # python
 .venv/
@@ -22,3 +23,11 @@ grok-register/
 grok-auto/
 *.log
 data/
+
+# panel/crawl runtime artifacts (root only)
+/dashboard/logs/
+/seen*.json
+/panel_seen.json
+/panel_out.json
+/tweets*.json
+/smoke/
