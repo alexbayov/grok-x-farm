@@ -3,6 +3,8 @@
 **Free Twitter/X parser built on a self-replenishing Grok account farm.**
 Zero API costs: autoreg → gateway pool → live X search. Full workflow tested end-to-end on 2026-09-20.
 
+![grok-x-farm status dashboard](assets/dashboard.png)
+
 Twitter API costs $200/mo. Grok has built-in live X search and returns real posts (handle, date, text, likes, URL) for free. This repo is the complete pipeline:
 
 ```
