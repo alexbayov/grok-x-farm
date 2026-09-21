@@ -13,7 +13,7 @@ metadata:
 # Grok X-Parser Farm
 
 Free Twitter/X parsing pipeline: autoreg Grok accounts → grok2api gateway pool → live X search.
-Full workflow verified end-to-end 2026-09-20 (+audit same day; v2 parser reliability 2026-09-21). Repo: github.com/MeshFinancial/grok-x-farm.
+Full workflow verified end-to-end 2026-09-20 (+audit same day). Repo: github.com/MeshFinancial/grok-x-farm.
 
 ## Fastest path (unified CLI)
 
@@ -21,9 +21,7 @@ Full workflow verified end-to-end 2026-09-20 (+audit same day; v2 parser reliabi
 python farm.py doctor                                  # health: gateway/geo/pool/models/probe
 python farm.py reg --count 5                           # reg → auto-import → convert to Build
 python farm.py parse "query" --max 15 --json out.json  # single search
-python farm.py crawl --queries-file parser/queries.txt --target 100 --out tweets.json --state seen.json
-                                           # --state: cross-run dedup (merges all runs into output);
-                                           # date-window filter + fxtwitter verify (exists/date/likes) built in
+python farm.py crawl --queries-file parser/queries.txt --target 100 --out tweets.json
 ```
 
 Config: `farm.config.json` (copy config/farm.config.example.json) — email provider
@@ -72,17 +70,17 @@ Turnstile solved FREE: patchright + manual turnstile.render, sitekey `0x4AAAAAAA
 ## Pitfalls (all hit in practice)
 
 1. curl_cffi 0.14+ broken on Windows → pin 0.13.0
-2. RU egress geo-blocked by xAI → US/EU/UA residential or clean DC
+2. RU egress geo-blocked by xAI → US/EU residential or clean DC
 3. Signup page in RU breaks AaronL725 selectors → patch Russian variants into `registration_browser.py` scoreEntry (2 places)
 4. credentialEncryptionKey must be base64(32 bytes) — `openssl rand -base64 32` (Windows: gen_secrets.ps1)
 5. CPA refresh tokens die ~1 month (invalid_grant); SSO stays alive → import by SSO
-6. Web→Build conversion unlocks grok-4.5/4.6 + function calling: `POST /api/admin/v1/accounts/web/convert-to-build {"all":true,"strategy":"missing"}`
+6. Web→Build conversion unlocks grok-4.6 + function calling: `POST /api/admin/v1/accounts/web/convert-to-build {"all":true,"strategy":"missing"}`
 7. Gateway 502 transient → retry with backoff (farm.py has 3 attempts built in)
 8. GitHub push on this machine: git-remote-https missing → Git Data/Contents API (empty repo: Contents PUT bootstraps main; blobs/trees 409)
 9. X filters explicit grey-market queries ('cvv shop', 'account selling' → 0 results); use neutral wording
 10. Model dates can drift outside requested window → post-filter by date field
 11. doctor geo-check: use ip-api countryCode field, not country name
-12. Tool use = Build pool only (grok-4.5/4.6). Web pool grok-chat-fast rejects tools with 400 invalid_tools
+12. Tool use = Build pool only (grok-4.6). Web pool grok-chat-fast rejects tools with 400 invalid_tools
 
 ## Admin API cheatsheet
 

@@ -44,9 +44,9 @@ Copy `config/farm.config.example.json` → `farm.config.json` and edit:
   "captcha": { "mode": "free_browser" },     // free_browser ($0, patchright) | yescaptcha (paid fallback)
   "proxy":   { "mode": "direct",             // direct | single | pool
                "single": "",                 // http://user:pass@host:port — NON-RU geo required
-               "geo_whitelist": ["US","EU","UA"] },
+               "geo_whitelist": ["US","EU"] },
   "gateway": { "parse_model": "grok-chat-fast",  // Web pool = native live X search
-               "tool_model": "grok-4.5" },       // Build pool = function calling
+               "tool_model": "grok-4.6" },       // Build pool = function calling
   "parser":  { "posts_per_query": 15, "days_window": 14, "verify_sample_size": 10, "delay_between_queries_sec": 3 }
 }
 ```
@@ -81,11 +81,11 @@ python dashboard/panel.py            # → http://127.0.0.1:8010 (localhost only
 
 ## Tool use (Build pool)
 
-Function calling works on grok-4.5/4.6 (Build pool) — verified full cycle:
+Function calling works on grok-4.6 (Build pool) — verified full cycle:
 
 ```bash
 curl http://127.0.0.1:8000/v1/chat/completions -H "Authorization: Bearer g2a_xxx" -d '{
-  "model": "grok-4.5",
+  "model": "grok-4.6",
   "messages": [{"role":"user","content":"What is the weather in Tokyo?"}],
   "tools": [{"type":"function","function":{"name":"get_weather",
     "parameters":{"type":"object","properties":{"city":{"type":"string"}},"required":["city"]}}}]
@@ -130,12 +130,12 @@ server-side search (`num_server_side_tools_used: 0` in every test). The working 
 ## Key pitfalls (all hit in practice)
 
 1. **`curl_cffi` must be pinned to 0.13.0** on Windows — 0.14+ ships broken `_wrapper`
-2. **Turnstile is solved free** via patchright + manual `turnstile.render` (sitekey `0x4AAAAAAAhr9JGVDZbrZOo0`) — no 2captcha/YesCaptcha needed
+2. **Turnstile is solved free** via patchright + manual `turnstile.render` (sitekey `0x4AAAAAAAhr9JGVDZbrZOo0`) — no paid solver needed by default (yescaptcha/capsolver/nopecha/2captcha configurable as fallback)
 3. **RU egress IPs are geo-blocked by xAI** — need US/EU residential or clean DC
 4. **Registration page may render in Russian** — AaronL725's selectors only match en/zh; patch `registration_browser.py` with Russian button-text variants (see workflow guide)
 5. **CPA refresh tokens die in ~1 month** (`invalid_grant`), but SSO tokens stay alive — import via SSO
 6. **grok2api `credentialEncryptionKey` must be base64 of exactly 32 bytes** — `openssl rand -base64 32`, not urlsafe random string
-7. **Web→Build conversion** (`POST /api/admin/v1/accounts/web/convert-to-build`) unlocks grok-4.5/4.6 routes
+7. **Web→Build conversion** (`POST /api/admin/v1/accounts/web/convert-to-build`) unlocks grok-4.6 routes
 
 ## Gateway admin API cheatsheet
 

@@ -35,14 +35,14 @@ def test_apply_updates_valid():
         "proxy.single": "http://u:p@1.2.3.4:8080",
         "parser.posts_per_query": 20,
         "parser.delay_between_queries_sec": 1.5,
-        "proxy.geo_whitelist": ["US", "UA"],
+        "proxy.geo_whitelist": ["US", "EU"],
     })
     assert errors == []
     assert cfg["email"]["provider"] == "gmail"
     assert cfg["captcha"]["mode"] == "yescaptcha"
     assert cfg["parser"]["posts_per_query"] == 20
     assert cfg["parser"]["delay_between_queries_sec"] == 1.5
-    assert cfg["proxy"]["geo_whitelist"] == ["US", "UA"]
+    assert cfg["proxy"]["geo_whitelist"] == ["US", "EU"]
 
 
 def test_apply_updates_rejects_bad():
@@ -50,7 +50,7 @@ def test_apply_updates_rejects_bad():
     before = json.dumps(cfg, sort_keys=True)
     errors = panel.apply_updates(cfg, {
         "email.provider": "not_a_provider",       # not in whitelist
-        "captcha.mode": "2captcha",               # not in whitelist
+        "captcha.mode": "deadcaptcha",             # not in whitelist
         "gateway.admin_pass_env": "HACKED",       # not an editable key
         "parser.posts_per_query": "many",         # wrong type
         "parser.days_window": -5,                 # out of range

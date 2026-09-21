@@ -38,23 +38,29 @@ GATEWAY_EXE_CANDIDATES = [
     os.path.join(FARM_DIR, "grok2api", "grok2api.exe"),
 ]
 
-SECRET_KEYS = ("G2A_KEY", "G2A_ADMIN_PASS", "YESCAPTCHA_KEY", "GMAIL_APP_PASSWORD",
+SECRET_KEYS = ("G2A_KEY", "G2A_ADMIN_PASS", "YESCAPTCHA_KEY", "CAPSOLVER_KEY", "NOPETCHA_KEY",
+               "TWOCAPTCHA_KEY", "GMAIL_APP_PASSWORD",
                "LUCKMAIL_API_KEY", "LUCKMAIL_API_SECRET", "MAILNEST_API_KEY", "FCE_API_KEY")
 
 ENUM_KEYS = {
     "email.provider": {"tmail", "luckmail", "mailnest", "fce", "gptmail", "gmail", "outlook"},
-    "captcha.mode": {"free_browser", "yescaptcha"},
+    "captcha.mode": {"free_browser", "yescaptcha", "capsolver", "nopecha", "2captcha"},
     "proxy.mode": {"direct", "single", "pool"},
 }
 INT_KEYS = {"parser.posts_per_query", "parser.days_window", "parser.verify_sample_size",
-            "captcha.fallback_after_n_failures", "gateway.rpm_limit", "gateway.max_concurrent"}
+            "captcha.fallback_after_n_failures", "captcha.solver_timeout_sec", "captcha.retry_per_solver",
+            "farm.count_per_run", "farm.threads",
+            "gateway.rpm_limit", "gateway.max_concurrent"}
 FLOAT_KEYS = {"parser.delay_between_queries_sec"}
 STR_KEYS = {"proxy.single", "email.gmail.base_email", "email.outlook.accounts_file",
+            "captcha.turnstile_sitekey",
             "gateway.parse_model", "gateway.tool_model", "gateway.reasoning_model",
             "gateway.exe_path"}
 LIST_KEYS = {"proxy.geo_whitelist"}
 INT_RANGES = {"parser.posts_per_query": (1, 100), "parser.days_window": (0, 365),
               "parser.verify_sample_size": (0, 100), "captcha.fallback_after_n_failures": (1, 100),
+              "captcha.solver_timeout_sec": (10, 600), "captcha.retry_per_solver": (1, 10),
+              "farm.count_per_run": (1, 200), "farm.threads": (1, 4),
               "gateway.rpm_limit": (1, 100000), "gateway.max_concurrent": (1, 64)}
 FLOAT_RANGES = {"parser.delay_between_queries_sec": (0.0, 300.0)}
 EDITABLE = set(ENUM_KEYS) | INT_KEYS | FLOAT_KEYS | STR_KEYS | LIST_KEYS
@@ -427,12 +433,25 @@ pre{background:#05070a;border:1px solid var(--line);border-radius:6px;padding:12
 <div><label>email provider</label><select id="s_email">
 <option>tmail</option><option>luckmail</option><option>mailnest</option><option>fce</option><option>gptmail</option><option>gmail</option><option>outlook</option></select></div>
 <div><label>gmail base (redacted)</label><input id="s_gmail" placeholder="пусто = без изменений"></div>
-<div><label>captcha mode</label><select id="s_cap"><option>free_browser</option><option>yescaptcha</option></select></div>
+<div><label>captcha mode</label><select id="s_cap"><option>free_browser</option><option>yescaptcha</option><option>capsolver</option><option>nopecha</option><option>2captcha</option></select></div>
+<div><label>turnstile sitekey</label><input id="s_sitekey" placeholder="0x4AAAAAAAhr9JGVDZbrZOo0"></div>
+<div><label>solver timeout sec</label><input id="s_captimeout" type="number" min="10" max="600"></div>
+<div><label>retries per solver</label><input id="s_capretry" type="number" min="1" max="10"></div>
+<div><label>fallback after N fails</label><input id="s_capfallback" type="number" min="1" max="100"></div>
 <div><label>yescaptcha key (secret)</label><input id="s_capkey" type="password" placeholder="пусто = без изменений"></div>
+<div><label>capsolver key (secret)</label><input id="s_capsolverkey" type="password" placeholder="пусто = без изменений"></div>
+<div><label>nopecha key (secret)</label><input id="s_nopechakey" type="password" placeholder="пусто = без изменений"></div>
+<div><label>2captcha key (secret)</label><input id="s_2captchakey" type="password" placeholder="пусто = без изменения"></div>
 <div><label>proxy mode</label><select id="s_pmode"><option>direct</option><option>single</option><option>pool</option></select></div>
 <div><label>proxy single (redacted)</label><input id="s_psingle" placeholder="пусто = без изменений"></div>
 <div><label>geo whitelist (через запятую)</label><input id="s_geo"></div>
 <div><label>parse model</label><input id="s_pmodel"></div>
+<div><label>tool model</label><input id="s_toolmodel"></div>
+<div><label>reasoning model</label><input id="s_reasonmodel"></div>
+<div><label>count per run</label><input id="s_cpr" type="number" min="1" max="200"></div>
+<div><label>reg threads</label><input id="s_threads" type="number" min="1" max="4"></div>
+<div><label>gateway rpm</label><input id="s_rpm" type="number" min="1" max="100000"></div>
+<div><label>gateway max concurrent</label><input id="s_conc" type="number" min="1" max="64"></div>
 <div><label>posts per query</label><input id="s_ppq" type="number" min="1" max="100"></div>
 <div><label>days window</label><input id="s_days" type="number" min="0" max="365"></div>
 <div><label>query delay sec</label><input id="s_delay" type="number" step="0.5" min="0" max="300"></div>
@@ -498,17 +517,32 @@ async function tailLog(){if(!curLog)return;
 async function loadConfig(){const d=await api('/api/config');loadedCfg=d;
  $('s_email').value=d.email.provider;$('s_cap').value=d.captcha.mode;$('s_pmode').value=d.proxy.mode;
  $('s_geo').value=(d.proxy.geo_whitelist||[]).join(', ');$('s_pmodel').value=d.gateway.parse_model||'';
+ $('s_toolmodel').value=d.gateway.tool_model||'';$('s_reasonmodel').value=d.gateway.reasoning_model||'';
+ $('s_sitekey').value=d.captcha.turnstile_sitekey||'';$('s_captimeout').value=d.captcha.solver_timeout_sec||70;
+ $('s_capretry').value=d.captcha.retry_per_solver||2;$('s_capfallback').value=d.captcha.fallback_after_n_failures||3;
+ $('s_cpr').value=d.farm.count_per_run||5;$('s_threads').value=d.farm.threads||1;
+ $('s_rpm').value=d.gateway.rpm_limit||120;$('s_conc').value=d.gateway.max_concurrent||8;
  $('s_ppq').value=d.parser.posts_per_query;$('s_days').value=d.parser.days_window;
  $('s_delay').value=d.parser.delay_between_queries_sec!==undefined?d.parser.delay_between_queries_sec:3;
  $('s_vs').value=d.parser.verify_sample_size;
  $('s_exe').value=d.gateway.exe_path||'';
- $('cfgState').innerHTML=`<span class="pill ${d.secrets.G2A_KEY?'ok':'err'}">G2A_KEY ${d.secrets.G2A_KEY?'set':'missing'}</span> <span class="pill ${d.secrets.YESCAPTCHA_KEY?'ok':'err'}">YESCAPTCHA ${d.secrets.YESCAPTCHA_KEY?'set':'—'}</span>`;
+ $('cfgState').innerHTML=`<span class="pill ${d.secrets.G2A_KEY?'ok':'err'}">G2A_KEY ${d.secrets.G2A_KEY?'set':'missing'}</span> <span class="pill ${d.secrets.YESCAPTCHA_KEY?'ok':'err'}">YESCAPTCHA ${d.secrets.YESCAPTCHA_KEY?'set':'—'}</span> <span class="pill ${d.secrets.CAPSOLVER_KEY?'ok':'err'}">CAPSOLVER ${d.secrets.CAPSOLVER_KEY?'set':'—'}</span>`;
  $('s_gmail').placeholder=d.email.gmail&&d.email.gmail.base_email?d.email.gmail.base_email:'пусто = без изменений';
  $('s_psingle').placeholder=d.proxy.single||'пусто = без изменений';}
 async function saveAll(btn){btn.disabled=true;const u={};
  const v=(id,key,parse)=>{const x=$(id).value.trim();if(x&&!x.includes('***'))u[key]=parse?parse(x):x;};
  if($('s_email').value!==loadedCfg.email.provider)u['email.provider']=$('s_email').value;
  if($('s_cap').value!==loadedCfg.captcha.mode)u['captcha.mode']=$('s_cap').value;
+ if($('s_sitekey').value&&$('s_sitekey').value!==loadedCfg.captcha.turnstile_sitekey)u['captcha.turnstile_sitekey']=$('s_sitekey').value;
+ const cto=+$('s_captimeout').value;if(cto&&cto!==loadedCfg.captcha.solver_timeout_sec)u['captcha.solver_timeout_sec']=cto;
+ const cre=+$('s_capretry').value;if(cre&&cre!==loadedCfg.captcha.retry_per_solver)u['captcha.retry_per_solver']=cre;
+ const cfb=+$('s_capfallback').value;if(cfb&&cfb!==loadedCfg.captcha.fallback_after_n_failures)u['captcha.fallback_after_n_failures']=cfb;
+ if($('s_toolmodel').value&&$('s_toolmodel').value!==loadedCfg.gateway.tool_model)u['gateway.tool_model']=$('s_toolmodel').value;
+ if($('s_reasonmodel').value&&$('s_reasonmodel').value!==loadedCfg.gateway.reasoning_model)u['gateway.reasoning_model']=$('s_reasonmodel').value;
+ const cpr=+$('s_cpr').value;if(cpr&&cpr!==loadedCfg.farm.count_per_run)u['farm.count_per_run']=cpr;
+ const thr=+$('s_threads').value;if(thr&&thr!==loadedCfg.farm.threads)u['farm.threads']=thr;
+ const rpm=+$('s_rpm').value;if(rpm&&rpm!==loadedCfg.gateway.rpm_limit)u['gateway.rpm_limit']=rpm;
+ const conc=+$('s_conc').value;if(conc&&conc!==loadedCfg.gateway.max_concurrent)u['gateway.max_concurrent']=conc;
  if($('s_pmode').value!==loadedCfg.proxy.mode)u['proxy.mode']=$('s_pmode').value;
  v('s_gmail','email.gmail.base_email');v('s_psingle','proxy.single');v('s_exe','gateway.exe_path');v('s_pmodel','gateway.parse_model');
  const geo=$('s_geo').value.split(',').map(s=>s.trim()).filter(Boolean);
@@ -518,9 +552,12 @@ async function saveAll(btn){btn.disabled=true;const u={};
  const d=await api('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({updates:u})});
  if(d.ok){const sec={};
   if($('s_capkey').value)sec.YESCAPTCHA_KEY=$('s_capkey').value;
+  if($('s_capsolverkey').value)sec.CAPSOLVER_KEY=$('s_capsolverkey').value;
+  if($('s_nopechakey').value)sec.NOPETCHA_KEY=$('s_nopechakey').value;
+  if($('s_2captchakey').value)sec.TWOCAPTCHA_KEY=$('s_2captchakey').value;
   if($('s_g2a').value)sec.G2A_KEY=$('s_g2a').value;
   if(Object.keys(sec).length){const s=await api('/api/secrets',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(sec)});
-   showMsg('cfgMsg','saved: config + '+Object.keys(sec).join(', '),s.ok);$('s_capkey').value='';$('s_g2a').value='';}
+   showMsg('cfgMsg','saved: config + '+Object.keys(sec).join(', '),s.ok);$('s_capkey').value='';$('s_capsolverkey').value='';$('s_nopechakey').value='';$('s_2captchakey').value='';$('s_g2a').value='';}
   else showMsg('cfgMsg','config saved ('+Object.keys(u).length+' keys)',true);
   loadConfig();}
  else showMsg('cfgMsg','errors: '+d.errors.join('; '),false);

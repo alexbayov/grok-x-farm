@@ -43,7 +43,7 @@ python grok_register_ttk.py
 
 Админ-API (логин `POST /api/admin/v1/auth/login`):
 - импорт SSO: `POST /api/admin/v1/accounts/web/import` (multipart, файл = SSO-токен текстом)
-- конверсия Web→Build (даёт grok-4.5/4.6): `POST /api/admin/v1/accounts/web/convert-to-build` `{"all":true,"strategy":"missing"}`
+- конверсия Web→Build (даёт grok-4.6): `POST /api/admin/v1/accounts/web/convert-to-build` `{"all":true,"strategy":"missing"}`
 - ключ клиенту: `POST /api/admin/v1/client-keys` → `g2a_xxx`
 
 После импорта `GET /v1/models` отдаёт 9 моделей: grok-4.5, grok-4.6, grok-chat-fast, imagine-image/video и др.

@@ -5,7 +5,7 @@
   python x_parser.py "query"                      # живой поиск постов
   python x_parser.py "query" --handle elonmusk    # только посты конкретного автора
   python x_parser.py "query" --json out.json      # сохранить JSON
-  python x_parser.py "query" --model grok-4.5     # другая модель (Build-пул)
+  python x_parser.py "query" --model grok-4.6     # другая модель (Build-пул)
 
 Шлюз: http://127.0.0.1:8000 (grok2api), client key в env G2A_KEY или файле рядом.
 """

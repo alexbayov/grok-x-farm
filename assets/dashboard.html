@@ -112,7 +112,7 @@ h1 .x{color:var(--accent)}
     <div class="conn">──▶</div>
     <div class="step"><div class="no">02</div><div class="t">ШЛЮЗ</div><div class="d">grok2api :8000 · 127.0.0.1<br>пул акков + ротация</div><div class="m">OpenAI API · 9 моделей</div></div>
     <div class="conn">──▶</div>
-    <div class="step"><div class="no">03</div><div class="t">КОНВЕРСИЯ</div><div class="d">Web → Build авто<br>grok-4.5 / grok-4.6</div><div class="m">+ tool use (function calling)</div></div>
+    <div class="step"><div class="no">03</div><div class="t">КОНВЕРСИЯ</div><div class="d">Web → Build авто<br>grok-4.6 tool+reasoning</div><div class="m">+ tool use (function calling)</div></div>
     <div class="conn">──▶</div>
     <div class="step"><div class="no">04</div><div class="t">ПАРСИНГ X</div><div class="d">live X search промптом<br>seen-state дедуп · фильтр дат</div><div class="m">8–10 с/запрос · fxtwitter verify</div></div>
   </div>
@@ -128,9 +128,9 @@ h1 .x{color:var(--accent)}
   <div class="panel">
     <div class="ptitle">Статус стека · farm.py doctor</div>
     <div class="row"><span class="k"><span class="dot g"></span>gateway :8000 healthz</span><span class="v ok">200 OK</span></div>
-    <div class="row"><span class="k"><span class="dot g"></span>egress geo</span><span class="v ok">UA · whitelist</span></div>
+    <div class="row"><span class="k"><span class="dot g"></span>egress geo</span><span class="v ok">US/EU · whitelist</span></div>
     <div class="row"><span class="k"><span class="dot g"></span>пул аккаунтов</span><span class="v ok">1338 записей (669×Web+Build)</span></div>
-    <div class="row"><span class="k"><span class="dot g"></span>модели</span><span class="v ok">9 · 4.5/4.6/fast/imagine</span></div>
+    <div class="row"><span class="k"><span class="dot g"></span>модели</span><span class="v ok">9 · 4.6/fast/imagine</span></div>
     <div class="row"><span class="k"><span class="dot g"></span>inference probe</span><span class="v ok">FARM_OK</span></div>
     <div class="row total"><span class="k">РЕЗУЛЬТАТ</span><span class="pill">ALL OK</span></div>
   </div>
@@ -138,7 +138,7 @@ h1 .x{color:var(--accent)}
   <div class="panel">
     <div class="ptitle">Пруфы прогона</div>
     <div class="row"><span class="k"><span class="dot g"></span>аккаунтов с нуля</span><span class="v ok">14 · +655 старых SSO ожили</span></div>
-    <div class="row"><span class="k"><span class="dot g"></span>tool use grok-4.5</span><span class="v ok">полный цикл 200</span></div>
+    <div class="row"><span class="k"><span class="dot g"></span>tool use grok-4.6</span><span class="v ok">полный цикл 200</span></div>
     <div class="row"><span class="k"><span class="dot g"></span>grok-4.6 live</span><span class="v ok">GROK46_OK · 22с</span></div>
     <div class="row"><span class="k"><span class="dot g"></span>верификация fxtwitter</span><span class="v ok">10/10 реальные</span></div>
     <div class="row"><span class="k"><span class="dot g"></span>сверка лайков</span><span class="v ok">1:1</span></div>
