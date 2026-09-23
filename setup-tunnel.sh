@@ -61,7 +61,8 @@ else
 fi
 
 # ── 2. SSH-КЛЮЧ ───────────────────────────────────────────
-SSH_KEY="$HOME/.ssh/grok_farm_key"
+SSH_KEY="${GROK_SSH_KEY:-$HOME/.ssh/grok_mac_key}"
+[[ -f "$SSH_KEY" ]] || SSH_KEY="$HOME/.ssh/grok_farm_key"
 
 if [[ -f "$SSH_KEY" ]]; then
     ok "SSH-ключ найден: $SSH_KEY"
